@@ -25,8 +25,7 @@ RUN apk add --update --no-cache \
         par2cmdline \
         bash \
         jq \
-        python3 \
-        py3-pip
+        python3
 
 # download sabnzbd source
 RUN SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name') && \
@@ -36,7 +35,7 @@ RUN SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/relea
     tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
     rm -f /tmp/sabnzbd.tar.gz
 
-# install sabnzbd python requirements
+# install sabnzbd requirements using built-in pip
 RUN python3 -m venv /lossy && \
     /lossy/bin/pip install -U --no-cache-dir pip && \
     /lossy/bin/pip install -U --no-cache-dir -r /app/sabnzbd/requirements.txt
