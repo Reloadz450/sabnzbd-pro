@@ -11,23 +11,24 @@ ARG SABNZBD_VERSION
 LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="Reloadz450"
 
-# environment settings
 ENV HOME="/config" \
     PYTHONIOENCODING=utf-8
 
-# install required packages and sabnzbd
+# install packages and sabnzbd in one consistent shell block
 RUN apk add --no-cache \
     python3 py3-pip py3-virtualenv \
     ffmpeg pigz unzip unrar tar par2cmdline bash jq curl \
  && echo "***** installing sabnzbd *****" \
- && export SABNZBD_VERSION="${SABNZBD_VERSION:-$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name')}" \
- && mkdir -p /app/sabnzbd \
- && curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz \
- && tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 \
- && rm -f /tmp/sabnzbd.tar.gz \
- && python3 -m venv /lossy \
- && /lossy/bin/pip install -U --no-cache-dir pip \
- && /lossy/bin/pip install -U --no-cache-dir -r /app/sabnzbd/requirements.txt
+ && sh -c '\
+    SABNZBD_VERSION="${SABNZBD_VERSION:-$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r ".tag_name")}" && \
+    mkdir -p /app/sabnzbd && \
+    curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz && \
+    tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
+    rm -f /tmp/sabnzbd.tar.gz && \
+    python3 -m venv /lossy && \
+    /lossy/bin/pip install -U --no-cache-dir pip && \
+    /lossy/bin/pip install -U --no-cache-dir -r /app/sabnzbd/requirements.txt \
+ ' 
 
 # copy post-processing script
 COPY root/etc/scripts/postproc_verify_ffprobe.sh /usr/local/bin/postproc_verify_ffprobe.sh
@@ -39,9 +40,9 @@ COPY root/ /
 # add static unrar binary
 COPY --from=unrar /usr/bin/unrar-alpine /usr/bin/unrar
 
-# ports and volumes
+# expose ports
 EXPOSE 8080 8090
 VOLUME /config
 
-# run sabnzbd directly
+# start sabnzbd
 CMD ["/lossy/bin/python3", "/app/sabnzbd/SABnzbd.py", "--config-file", "/config"]
