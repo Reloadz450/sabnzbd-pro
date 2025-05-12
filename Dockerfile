@@ -23,7 +23,8 @@ RUN echo "***** install packages *****" && \
     unrar \
     tar \
     par2cmdline \
-    bash && \
+    bash \
+    jq && \
     echo "***** install sabnzbd *****" && \
     if [ -z "${SABNZBD_VERSION+x}" ]; then \
         SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name'); \
@@ -42,8 +43,8 @@ RUN echo "***** install packages *****" && \
     autoconf \
     libffi-dev \
     libxml2-dev \
-    libxslt-dev \
-    && rm -rf /tmp/* /var/cache/apk/*
+    libxslt-dev && \
+    rm -rf /tmp/* /var/cache/apk/*
 
 # Add post-processing script
 COPY root/etc/scripts/postproc_verify_ffprobe.sh /usr/local/bin/postproc_verify_ffprobe.sh
