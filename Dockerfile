@@ -15,7 +15,6 @@ LABEL maintainer="thespad"
 ENV HOME="/config" \
     PYTHONIOENCODING=utf-8
 
-# install all required packages and sabnzbd
 RUN apk add --update --no-cache \
         ffmpeg \
         pigz \
@@ -29,16 +28,14 @@ RUN apk add --update --no-cache \
         py3-pip \
         py3-virtualenv && \
     echo "***** installing sabnzbd *****" && \
-    /bin/sh -c '\
-        export SABNZBD_VERSION="${SABNZBD_VERSION:-$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r ".tag_name")}" && \
-        mkdir -p /app/sabnzbd && \
-        curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz && \
-        tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
-        rm -f /tmp/sabnzbd.tar.gz && \
-        python3 -m venv /lossy && \
-        /lossy/bin/pip install -U --no-cache-dir pip && \
-        /lossy/bin/pip install -U --no-cache-dir -r /app/sabnzbd/requirements.txt \
-    ' && \
+    SABNZBD_VERSION="${SABNZBD_VERSION:-$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name')}" && \
+    mkdir -p /app/sabnzbd && \
+    curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz && \
+    tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
+    rm -f /tmp/sabnzbd.tar.gz && \
+    python3 -m venv /lossy && \
+    /lossy/bin/pip install -U --no-cache-dir pip && \
+    /lossy/bin/pip install -U --no-cache-dir -r /app/sabnzbd/requirements.txt && \
     echo "***** cleanup *****" && \
     apk del --no-network --purge \
         build-base \
@@ -47,7 +44,6 @@ RUN apk add --update --no-cache \
         libxml2-dev \
         libxslt-dev && \
     rm -rf /tmp/* /var/cache/apk/*
-
 
 # Add post-processing script
 COPY root/etc/scripts/postproc_verify_ffprobe.sh /usr/local/bin/postproc_verify_ffprobe.sh
