@@ -45,4 +45,4 @@ EXPOSE 8080 8090
 VOLUME /config
 
 # start sabnzbd
-CMD ["/lossy/bin/python3", "/app/sabnzbd/SABnzbd.py", "--config-file", "/config"]
+CMD ["/lossy/bin/python3", "/app/sabnzbd/SABnzbd.py", "--server", "0.0.0.0:8080", "--config-file", "/config"]
