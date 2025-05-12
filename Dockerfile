@@ -15,7 +15,7 @@ LABEL maintainer="thespad"
 ENV HOME="/config" \
     PYTHONIOENCODING=utf-8
 
-# install all required packages and sabnzbd
+# install dependencies
 RUN apk add --update --no-cache \
         ffmpeg \
         pigz \
@@ -27,18 +27,23 @@ RUN apk add --update --no-cache \
         jq \
         python3 \
         py3-pip \
-        py3-virtualenv && \
-    echo "***** installing sabnzbd *****" && \
-    SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name') && \
+        py3-virtualenv
+
+# download sabnzbd source
+RUN SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name') && \
     mkdir -p /app/sabnzbd && \
-    curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz && \
+    curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" \
+        -o /tmp/sabnzbd.tar.gz && \
     tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
-    rm -f /tmp/sabnzbd.tar.gz && \
-    python3 -m venv /lossy && \
+    rm -f /tmp/sabnzbd.tar.gz
+
+# install sabnzbd python requirements
+RUN python3 -m venv /lossy && \
     /lossy/bin/pip install -U --no-cache-dir pip && \
-    /lossy/bin/pip install -U --no-cache-dir -r /app/sabnzbd/requirements.txt && \
-    echo "***** cleanup *****" && \
-    apk del --no-network --purge \
+    /lossy/bin/pip install -U --no-cache-dir -r /app/sabnzbd/requirements.txt
+
+# cleanup
+RUN apk del --no-network --purge \
         build-base \
         autoconf \
         libffi-dev \
