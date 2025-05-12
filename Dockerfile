@@ -26,8 +26,7 @@ RUN apk add --update --no-cache \
         bash \
         jq \
         python3 \
-        py3-pip \
-        py3-virtualenv
+        py3-pip
 
 # download sabnzbd source
 RUN SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name') && \
