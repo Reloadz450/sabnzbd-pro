@@ -32,3 +32,4 @@ jobs:
           tags: |
             reloadz450/sabnzbd-pro:latest
             reloadz450/sabnzbd-pro:stable
+            
