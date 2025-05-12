@@ -15,6 +15,7 @@ LABEL maintainer="thespad"
 ENV HOME="/config" \
     PYTHONIOENCODING=utf-8
 
+# install all required packages and sabnzbd
 RUN apk add --update --no-cache \
         ffmpeg \
         pigz \
@@ -28,7 +29,7 @@ RUN apk add --update --no-cache \
         py3-pip \
         py3-virtualenv && \
     echo "***** installing sabnzbd *****" && \
-    SABNZBD_VERSION="${SABNZBD_VERSION:-$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name')}" && \
+    SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name') && \
     mkdir -p /app/sabnzbd && \
     curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz && \
     tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
