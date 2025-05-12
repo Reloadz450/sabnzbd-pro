@@ -24,7 +24,8 @@ RUN echo "***** install packages *****" && \
     tar \
     par2cmdline \
     bash \
-    jq && \
+    jq &&
+    
     echo "***** install sabnzbd *****" && \
     if [ -z "${SABNZBD_VERSION+x}" ]; then \
         SABNZBD_VERSION=$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name'); \
