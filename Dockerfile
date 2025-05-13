@@ -17,7 +17,8 @@ ENV PYTHONIOENCODING=utf-8
 RUN apt-get update && \
     apt-get install -y \
     python3 python3-pip python3-venv \
-    ffmpeg pigz unzip unrar tar par2 jq curl bash && \
+    ffmpeg pigz unzip unrar tar par2 jq curl bash \
+    p7zip-full && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install SABnzbd
