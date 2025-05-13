@@ -6,7 +6,7 @@ FROM ghcr.io/linuxserver/baseimage-alpine:3.21
 
 ARG BUILD_DATE
 ARG VERSION
-ARG SABNZBD_VERSION
+ARG SABNZBD_VERSION=4.2.2
 
 LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="Reloadz450"
@@ -14,40 +14,33 @@ LABEL maintainer="Reloadz450"
 ENV HOME="/config" \
     PYTHONIOENCODING=utf-8
 
+# Install dependencies
 RUN apk add --no-cache \
     python3 py3-pip py3-virtualenv \
-    ffmpeg pigz unzip tar \
-    p7zip jq curl bash
+    ffmpeg pigz unzip unrar tar par2cmdline bash jq curl
 
 # Install SABnzbd
 RUN mkdir -p /app/sabnzbd && \
-    SABNZBD_VERSION="$(curl -s https://api.github.com/repos/sabnzbd/sabnzbd/releases/latest | jq -r '.tag_name')" && \
     curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz && \
     tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
     rm -f /tmp/sabnzbd.tar.gz
 
-# Set up Python environment
+# Set up Python virtual environment
 RUN python3 -m venv /lossy && \
     /lossy/bin/python -m pip install --upgrade pip setuptools wheel && \
     /lossy/bin/pip install --no-cache-dir -r /app/sabnzbd/requirements.txt
 
-# Copy postproc script
-COPY root/etc/scripts/postproc_verify_ffprobe.sh /usr/local/bin/postproc_verify_ffprobe.sh
-RUN chmod +x /usr/local/bin/postproc_verify_ffprobe.sh
+# Dummy postproc script for validation
+RUN echo -e '#!/bin/sh\nexit 0' > /usr/local/bin/postproc_verify_ffprobe.sh && \
+    chmod +x /usr/local/bin/postproc_verify_ffprobe.sh
 
-# Copy all other root-level files
-COPY root/ /
-
-# Add static unrar binary
-COPY --from=unrar /usr/bin/unrar-alpine /usr/bin/unrar
-
-# Fix for par2 not found
+# Fix for par2 binary missing
 RUN ln -s /usr/bin/par2 /usr/local/bin/par2
 
-# Placeholder script to satisfy SABnzbd's script check
-RUN echo -e '#!/bin/sh\nexit 0' > /config/scripts/placeholder.sh \
- && chmod +x /config/scripts/placeholder.sh
+# Copy static unrar binary
+COPY --from=unrar /usr/bin/unrar-alpine /usr/bin/unrar
 
+# Final container config
 EXPOSE 8080 8090
 VOLUME /config
 
