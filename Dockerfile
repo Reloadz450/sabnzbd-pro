@@ -16,7 +16,8 @@ ENV HOME="/config" \
 
 RUN apk add --no-cache \
     python3 py3-pip py3-virtualenv \
-    ffmpeg pigz unzip unrar tar par2cmdline bash jq curl
+    ffmpeg pigz unzip tar \
+    p7zip jq curl bash
 
 # Install SABnzbd
 RUN mkdir -p /app/sabnzbd && \
