@@ -41,6 +41,13 @@ COPY root/ /
 # Add static unrar binary
 COPY --from=unrar /usr/bin/unrar-alpine /usr/bin/unrar
 
+# Fix for par2 not found
+RUN ln -s /usr/bin/par2 /usr/local/bin/par2
+
+# Placeholder script to satisfy SABnzbd's script check
+RUN echo -e '#!/bin/sh\nexit 0' > /config/scripts/placeholder.sh \
+ && chmod +x /config/scripts/placeholder.sh
+
 EXPOSE 8080 8090
 VOLUME /config
 
