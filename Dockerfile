@@ -47,3 +47,4 @@ VOLUME /config
 # start sabnzbd
 ENTRYPOINT ["/lossy/bin/python3", "/app/sabnzbd/SABnzbd.py"]
 CMD ["--server", "0.0.0.0:8080", "--config-file", "/config"]
+
