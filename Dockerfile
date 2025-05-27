@@ -42,8 +42,9 @@ RUN cd /tmp && \
     make install && \
     cd / && rm -rf /tmp/par2cmdline-turbo*
 
-# Install SABnzbd from source
+# Clone SABnzbd and install dependencies
 RUN git clone -b 4.5.1 https://github.com/sabnzbd/sabnzbd.git /opt/sabnzbd
+RUN pip install --no-cache-dir sabctools
 
 # Copy entrypoint scripts and support files
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
