@@ -32,7 +32,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install par2cmdline-turbo v1.3.0 from source
-COPY root/sources/par2cmdline-turbo-v1.3.0.tar.gz /tmp/
+COPY root/par2cmdline-turbo-v1.3.0.tar.gz /tmp/
 RUN cd /tmp && \
     tar -xf par2cmdline-turbo-v1.3.0.tar.gz && \
     cd par2cmdline-turbo-1.3.0 && \
