@@ -1,44 +1,48 @@
-# syntax=docker/dockerfile:1
+FROM python:3.12-slim
 
-FROM ubuntu:22.04
-
-ARG BUILD_DATE
-ARG VERSION
-ARG SABNZBD_VERSION=4.2.2
-
-LABEL build_version="Reloadz450 version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="Reloadz450"
+LABEL version="4.5.1"
+LABEL description="Custom SABnzbd-Pro build with upstream SABnzbd 4.5.1, parallel unpack, ffprobe validation, and optimized post-processing support."
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV HOME="/config"
-ENV PYTHONIOENCODING=utf-8
+RUN apt-get update && apt-get install -y \
+    git \
+    ffmpeg \
+    p7zip-full \
+    par2 \
+    unrar-free \
+    ca-certificates \
+    curl \
+    tzdata \
+    logrotate && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install required packages
-RUN apt-get update && \
-    apt-get install -y \
-    python3 python3-pip python3-venv \
-    ffmpeg pigz unzip unrar tar par2 jq curl bash \
-    p7zip-full && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/sabnzbd
+RUN git clone https://github.com/sabnzbd/sabnzbd.git . && \
+    git checkout tags/4.5.1 && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Install SABnzbd
-RUN mkdir -p /app/sabnzbd && \
-    curl -L "https://github.com/sabnzbd/sabnzbd/releases/download/${SABNZBD_VERSION}/SABnzbd-${SABNZBD_VERSION}-src.tar.gz" -o /tmp/sabnzbd.tar.gz && \
-    tar -xf /tmp/sabnzbd.tar.gz -C /app/sabnzbd --strip-components=1 && \
-    rm -f /tmp/sabnzbd.tar.gz
+COPY scripts/ /opt/sabnzbd/scripts/
+RUN chmod +x /opt/sabnzbd/scripts/*.sh
 
-# Set up Python venv and install dependencies
-RUN python3 -m venv /lossy && \
-    /lossy/bin/python -m pip install --upgrade pip setuptools wheel && \
-    /lossy/bin/pip install --no-cache-dir -r /app/sabnzbd/requirements.txt
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Dummy script for postproc to avoid SAB errors
-RUN echo -e '#!/bin/bash\nexit 0' > /usr/local/bin/postproc_verify_ffprobe.sh && \
-    chmod +x /usr/local/bin/postproc_verify_ffprobe.sh
+COPY healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod +x /usr/local/bin/healthcheck.sh
 
-# Define mount point and ports
+COPY logrotate-launch.sh /usr/local/bin/logrotate-launch.sh
+RUN chmod +x /usr/local/bin/logrotate-launch.sh
+
+RUN mkdir -p /config /downloads/complete /downloads/incomplete /downloads/intermediate /scripts
+
 VOLUME /config
-EXPOSE 8080 8090
+VOLUME /downloads
+VOLUME /scripts
 
-ENTRYPOINT ["/lossy/bin/python3"]
-CMD ["/app/sabnzbd/SABnzbd.py", "--server", "0.0.0.0:8080", "--config-file", "/config"]
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s CMD ["/usr/local/bin/healthcheck.sh"]
+
+ENV LOGROTATE_VERBOSE=true
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
