@@ -1,48 +1,70 @@
-FROM python:3.12-slim
+# Dockerfile for SABnzbd-Pro with par2cmdline-turbo support
+
+FROM python:3.12-slim as base
 
 LABEL maintainer="Reloadz450"
 LABEL version="4.5.1"
-LABEL description="Custom SABnzbd-Pro build with upstream SABnzbd 4.5.1, parallel unpack, ffprobe validation, and optimized post-processing support."
+LABEL description="Feature-rich SABnzbd build with enhanced unpacking, validation, and post-processing support."
 
-RUN apt-get update && apt-get install -y \
-    git \
-    ffmpeg \
-    p7zip-full \
-    par2 \
-    unrar-free \
-    ca-certificates \
-    curl \
-    tzdata \
-    logrotate && \
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set working directory
+WORKDIR /opt/sabnzbd
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y \
+        git \
+        gcc \
+        g++ \
+        make \
+        unzip \
+        par2 \
+        ffmpeg \
+        p7zip-full \
+        autoconf \
+        automake \
+        libtool \
+        pkg-config \
+        logrotate \
+        curl \
+        wget && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/sabnzbd
-RUN git clone https://github.com/sabnzbd/sabnzbd.git . && \
-    git checkout tags/4.5.1 && \
-    pip install --no-cache-dir -r requirements.txt
+# Install par2cmdline-turbo v1.3.0 from source
+COPY root/sources/par2cmdline-turbo-v1.3.0.tar.gz /tmp/
+RUN cd /tmp && \
+    tar -xf par2cmdline-turbo-v1.3.0.tar.gz && \
+    cd par2cmdline-turbo-1.3.0 && \
+    ./automake.sh && \
+    ./configure && \
+    make -j$(nproc) && \
+    make install && \
+    cd / && rm -rf /tmp/par2cmdline-turbo*
 
-COPY scripts/ /opt/sabnzbd/scripts/
-RUN chmod +x /opt/sabnzbd/scripts/*.sh
+# Install SABnzbd from source
+RUN git clone -b 4.5.1 https://github.com/sabnzbd/sabnzbd.git /opt/sabnzbd
 
+# Copy entrypoint scripts and support files
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 COPY healthcheck.sh /usr/local/bin/healthcheck.sh
-RUN chmod +x /usr/local/bin/healthcheck.sh
-
 COPY logrotate-launch.sh /usr/local/bin/logrotate-launch.sh
-RUN chmod +x /usr/local/bin/logrotate-launch.sh
+COPY scripts/ /config/scripts/
 
-RUN mkdir -p /config /downloads/complete /downloads/incomplete /downloads/intermediate /scripts
+RUN chmod +x /usr/local/bin/*.sh && chmod +x /config/scripts/*.sh
 
-VOLUME /config
-VOLUME /downloads
-VOLUME /scripts
+# Add logrotate config path
+RUN mkdir -p /etc/logrotate.d /config/logs
 
+# Ports and volumes
 EXPOSE 8080
+VOLUME ["/config", "/downloads", "/incomplete"]
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s CMD ["/usr/local/bin/healthcheck.sh"]
+# Environment for logrotate verbosity (optional)
+ENV LOGROTATE_VERBOSE=false
 
-ENV LOGROTATE_VERBOSE=true
+# Healthcheck
+HEALTHCHECK CMD ["healthcheck.sh"]
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Entrypoint
+ENTRYPOINT ["entrypoint.sh"]
