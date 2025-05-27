@@ -1,4 +1,4 @@
-# Dockerfile for SABnzbd-Pro with par2cmdline-turbo support
+# Dockerfile for SABnzbd-Pro with par2cmdline-turbo and sabctools
 
 FROM python:3.12-slim as base
 
@@ -31,6 +31,9 @@ RUN apt-get update && \
         wget && \
     rm -rf /var/lib/apt/lists/*
 
+# Install sabctools Python module required by SABnzbd
+RUN pip install sabctools
+
 # Install par2cmdline-turbo v1.3.0 from source
 COPY root/par2cmdline-turbo-v1.3.0.tar.gz /tmp/
 RUN cd /tmp && \
@@ -42,11 +45,10 @@ RUN cd /tmp && \
     make install && \
     cd / && rm -rf /tmp/par2cmdline-turbo*
 
-# Clone SABnzbd and install dependencies
+# Install SABnzbd from source (v4.5.1)
 RUN git clone -b 4.5.1 https://github.com/sabnzbd/sabnzbd.git /opt/sabnzbd
-RUN pip install --no-cache-dir sabctools
 
-# Copy entrypoint scripts and support files
+# Copy entrypoint and support scripts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY healthcheck.sh /usr/local/bin/healthcheck.sh
 COPY logrotate-launch.sh /usr/local/bin/logrotate-launch.sh
@@ -54,14 +56,14 @@ COPY scripts/ /config/scripts/
 
 RUN chmod +x /usr/local/bin/*.sh && chmod +x /config/scripts/*.sh
 
-# Add logrotate config path
+# Create essential paths
 RUN mkdir -p /etc/logrotate.d /config/logs
 
 # Ports and volumes
 EXPOSE 8080
 VOLUME ["/config", "/downloads", "/incomplete"]
 
-# Environment for logrotate verbosity (optional)
+# Environment
 ENV LOGROTATE_VERBOSE=false
 
 # Healthcheck
