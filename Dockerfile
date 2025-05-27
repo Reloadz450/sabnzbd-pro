@@ -1,6 +1,6 @@
-# Dockerfile for SABnzbd-Pro with par2cmdline-turbo and all dependencies
+# syntax=docker/dockerfile:1
 
-FROM python:3.12-slim AS base
+FROM python:3.12-slim as base
 
 LABEL maintainer="Reloadz450"
 LABEL version="4.5.1"
@@ -12,17 +12,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /opt/sabnzbd
 
 # Install system dependencies
-# Install official RARLabs unrar from tar.gz
-RUN curl -fsSL https://www.rarlab.com/rar/rarlinux-x64-711.tar.gz -o /tmp/rar.tar.gz && \
-    cd /tmp && \
-    tar -xzf rar.tar.gz && \
-    cp rar/unrar /usr/local/bin/unrar && \
-    chmod +x /usr/local/bin/unrar && \
-    rm -rf /tmp/rar*
-
 RUN apt-get update && \
     apt-get install -y \
-#        unrar-free \
+        unrar-free \
         git \
         gcc \
         g++ \
@@ -47,11 +39,11 @@ RUN cd /tmp && \
     cd par2cmdline-turbo-1.3.0 && \
     ./automake.sh && \
     ./configure && \
-    make -j$(nproc) && \
+    make -j"$(nproc)" && \
     make install && \
     cd / && rm -rf /tmp/par2cmdline-turbo*
 
-# Clone SABnzbd and install Python requirements
+# Clone SABnzbd 4.5.1 and install dependencies
 RUN git clone -b 4.5.1 https://github.com/sabnzbd/sabnzbd.git /opt/sabnzbd
 WORKDIR /opt/sabnzbd
 RUN pip install --upgrade \
@@ -67,16 +59,18 @@ COPY healthcheck.sh /usr/local/bin/healthcheck.sh
 COPY logrotate-launch.sh /usr/local/bin/logrotate-launch.sh
 COPY scripts/ /config/scripts/
 
-RUN chmod +x /usr/local/bin/*.sh && chmod +x /config/scripts/*.sh
+# Set permissions
+RUN chmod +x /usr/local/bin/*.sh && \
+    chmod +x /config/scripts/*.sh
 
-# Add logrotate config path
+# Create logrotate path
 RUN mkdir -p /etc/logrotate.d /config/logs
 
-# Ports and volumes
+# Expose and declare volumes
 EXPOSE 8080
 VOLUME ["/config", "/downloads", "/incomplete"]
 
-# Environment for logrotate verbosity (optional)
+# Optional environment variable
 ENV LOGROTATE_VERBOSE=false
 
 # Healthcheck
