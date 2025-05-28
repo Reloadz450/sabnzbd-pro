@@ -1,80 +1,70 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.4
 
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 
 LABEL maintainer="Reloadz450"
 LABEL version="4.5.1"
-LABEL description="Feature-rich SABnzbd build with enhanced unpacking, validation, and post-processing support."
+LABEL description="SABnzbd Pro 4.5.1 with par2cmdline-turbo, full post-processing stack, and optimized runtime."
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Set working directory
 WORKDIR /opt/sabnzbd
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y \
-        unrar-free \
-        git \
-        gcc \
-        g++ \
-        make \
-        unzip \
-        par2 \
-        ffmpeg \
-        p7zip-full \
-        autoconf \
-        automake \
-        libtool \
-        pkg-config \
-        logrotate \
-        curl \
-        wget && \
+    apt-get install -y --no-install-recommends \
+        git gcc g++ make unzip \
+        par2 ffmpeg p7zip-full \
+        autoconf automake libtool \
+        pkg-config logrotate curl wget \
+        ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Install par2cmdline-turbo v1.3.0 from source
+# Install unrar v7.11 from rarlab
+RUN curl -fsSL https://www.rarlab.com/rar/rarlinux-x64-711.tar.gz -o /tmp/rar.tar.gz && \
+    tar -xzf /tmp/rar.tar.gz -C /tmp && \
+    cp /tmp/rar/unrar /usr/local/bin/unrar && \
+    chmod +x /usr/local/bin/unrar && \
+    rm -rf /tmp/rar*
+
+# Install par2cmdline-turbo v1.3.0
 COPY root/par2cmdline-turbo-v1.3.0.tar.gz /tmp/
-RUN cd /tmp && \
-    tar -xf par2cmdline-turbo-v1.3.0.tar.gz && \
-    cd par2cmdline-turbo-1.3.0 && \
-    ./automake.sh && \
-    ./configure && \
-    make -j"$(nproc)" && \
-    make install && \
+RUN tar -xf /tmp/par2cmdline-turbo-v1.3.0.tar.gz -C /tmp && \
+    cd /tmp/par2cmdline-turbo-1.3.0 && \
+    ./automake.sh && ./configure && \
+    make -j$(nproc) && make install && \
     cd / && rm -rf /tmp/par2cmdline-turbo*
 
-# Clone SABnzbd 4.5.1 and install dependencies
+# Clone SABnzbd and install requirements
 RUN git clone -b 4.5.1 https://github.com/sabnzbd/sabnzbd.git /opt/sabnzbd
 WORKDIR /opt/sabnzbd
-RUN pip install --upgrade \
-        pip==25.1.1 \
-        setuptools==80.9.0 \
-        wheel==0.45.1 \
-        cython==3.1.1 && \
+
+RUN pip install --upgrade pip setuptools wheel cython && \
     pip install -r requirements.txt
 
-# Copy entrypoint scripts and support files
+# Copy entrypoint and helper scripts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY healthcheck.sh /usr/local/bin/healthcheck.sh
 COPY logrotate-launch.sh /usr/local/bin/logrotate-launch.sh
 COPY scripts/ /config/scripts/
 
-# Set permissions
-RUN chmod +x /usr/local/bin/*.sh && \
-    chmod +x /config/scripts/*.sh
+# Sanity check
+RUN test -x /usr/local/bin/entrypoint.sh || (echo "ERROR: entrypoint.sh missing or not executable!" && exit 1)
 
-# Create logrotate path
+# Permissions
+RUN chmod +x /usr/local/bin/*.sh && chmod +x /config/scripts/*.sh
+
+# Create expected directories
 RUN mkdir -p /etc/logrotate.d /config/logs
 
-# Expose and declare volumes
-EXPOSE 8080
+# Expose SABnzbd ports and define mount points
+EXPOSE 8080 8090
 VOLUME ["/config", "/downloads", "/incomplete"]
 
-# Optional environment variable
 ENV LOGROTATE_VERBOSE=false
 
-# Healthcheck
-HEALTHCHECK CMD ["healthcheck.sh"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD ["/usr/local/bin/healthcheck.sh"]
 
-# Entrypoint
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

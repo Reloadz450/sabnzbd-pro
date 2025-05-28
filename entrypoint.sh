@@ -1,23 +1,21 @@
 #!/bin/bash
 set -e
 
-log() {
-  echo "[ENTRYPOINT] $(date +'%Y-%m-%d %H:%M:%S') - $1" | tee -a /config/logs/entrypoint.log
+timestamp() {
+    date '+%Y-%m-%d %H:%M:%S'
 }
 
-log "Starting SABnzbd container setup..."
+echo "[ENTRYPOINT] $(timestamp) - Starting SABnzbd container setup..."
 
-for dir in /downloads /downloads/complete /downloads/incomplete /downloads/intermediate /scripts /config /config/logs; do
-  mkdir -p "$dir"
-  log "Ensured directory: $dir"
-done
+mkdir -p /downloads /downloads/complete /downloads/incomplete /downloads/intermediate
+mkdir -p /scripts /config /config/logs
 
-touch /config/logs/sabnzbd.log /config/logs/entrypoint.log
-chown nobody:users /config/logs/*.log || true
-chmod 644 /config/logs/*.log || true
+touch /config/sabnzbd.ini
+chmod 666 /config/sabnzbd.ini
 
-log "Initializing logrotate..."
-/usr/local/bin/logrotate-launch.sh
+echo "[ENTRYPOINT] $(timestamp) - Checking binaries..."
+echo "[ENTRYPOINT] par2: $(/usr/local/bin/par2 -V || echo 'not found')"
+echo "[ENTRYPOINT] unrar: $(/usr/local/bin/unrar | head -n 1 || echo 'not found')"
+echo "[ENTRYPOINT] Starting SABnzbd using direct script invocation..."
 
-log "Launching SABnzbd from /opt/sabnzbd"
-exec python3 /opt/sabnzbd/SABnzbd.py --server 0.0.0.0:8080 --config-file /config/sabnzbd.ini
+exec python3 /opt/sabnzbd/SABnzbd.py --console --server 0.0.0.0:8080 --config-file /config/sabnzbd.ini
